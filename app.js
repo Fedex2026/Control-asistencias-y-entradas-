@@ -194,7 +194,7 @@ async function getPosition() {
         };
         reject(new Error(messages[err.code] || "Error de ubicación."));
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
     );
   });
 }
@@ -250,13 +250,8 @@ async function loadWhatsAppSettings() {
 }
 
 function prepareWhatsAppWindow() {
-  if (!state.whatsappSettings.autoOpen) return null;
-
-  try {
-    return window.open("about:blank", "_blank");
-  } catch {
-    return null;
-  }
+  // Ya no abre una pestaña en blanco mientras se obtiene la ubicación.
+  return null;
 }
 
 async function notifyWhatsApp(type, record, popupWindow = null) {
@@ -299,11 +294,7 @@ async function notifyWhatsApp(type, record, popupWindow = null) {
     ? `https://wa.me/${number}?text=${encodeURIComponent(message)}`
     : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-  if (popupWindow && !popupWindow.closed) {
-    popupWindow.location.href = target;
-  } else {
-    window.location.href = target;
-  }
+  window.location.href = target;
 }
 
 async function loadProfile(uid) {
@@ -561,8 +552,7 @@ async function registerEntry(popupWindow = null) {
   els.attendanceBtn.disabled = true;
 
   try {
-    let location = await getPosition();
-    location = await reverseGeocode(location);
+    const location = await getPosition();
 
     const now = new Date();
     const payload = {
@@ -632,8 +622,7 @@ async function registerExit(popupWindow = null) {
   els.attendanceBtn.disabled = true;
 
   try {
-    let location = await getPosition();
-    location = await reverseGeocode(location);
+    const location = await getPosition();
 
     const now = new Date();
     const activeId = state.activeShift.id;
