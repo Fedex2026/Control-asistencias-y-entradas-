@@ -1,20 +1,27 @@
 {
   "name": "Control de Asistencias y Entradas",
   "short_name": "Asistencias",
+  "description": "Sistema de control de entradas, salidas y asistencia de operadores de Grúas Metropolitanas.",
+  "lang": "es-MX",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#071426",
   "theme_color": "#071426",
+
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
