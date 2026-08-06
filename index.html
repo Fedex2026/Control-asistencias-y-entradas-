@@ -117,13 +117,27 @@
 
           Contraseña
 
-          <input
-            id="loginPassword"
-            type="password"
-            autocomplete="current-password"
-            required
-            placeholder="••••••••"
-          >
+          <div class="password-box">
+
+            <input
+              id="loginPassword"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="••••••••"
+            >
+
+            <button
+              id="toggleLoginPassword"
+              class="password-eye"
+              type="button"
+              aria-label="Mostrar contraseña"
+              title="Mostrar contraseña"
+            >
+              👁
+            </button>
+
+          </div>
 
         </label>
 
@@ -136,17 +150,32 @@
           Ingresar
         </button>
 
+
+        <button
+          id="showRegisterBtn"
+          class="btn btn-register"
+          type="button"
+        >
+          Crear cuenta de operador
+        </button>
+
+
+        <button
+          id="forgotPasswordBtn"
+          class="forgot-password"
+          type="button"
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
+
       </form>
 
 
       <p class="login-help">
 
-        Los usuarios se crean desde Firebase Authentication
-        y su perfil se guarda en la colección
-
-        <b>
-          usuarios
-        </b>.
+        Los operadores pueden crear su cuenta.
+        El administrador deberá autorizarla antes de que puedan registrar
+        entradas y salidas.
 
       </p>
 
@@ -1461,6 +1490,179 @@
           type="submit"
         >
           Guardar configuración
+        </button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- MODAL REGISTRO DE OPERADOR -->
+
+  <div
+    id="registerModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-card">
+
+      <div class="modal-head">
+
+        <h3>
+          Crear cuenta de operador
+        </h3>
+
+        <button
+          id="closeRegisterModal"
+          class="close-modal"
+          type="button"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <p class="modal-note">
+        Completa tus datos. La cuenta quedará pendiente de autorización
+        por el administrador.
+      </p>
+
+
+      <form
+        id="registerForm"
+        class="form-stack"
+      >
+
+        <label>
+
+          Nombre completo
+
+          <input
+            id="registerName"
+            type="text"
+            required
+            autocomplete="name"
+            placeholder="Juan Pérez"
+          >
+
+        </label>
+
+
+        <label>
+
+          Correo
+
+          <input
+            id="registerEmail"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="operador@gmail.com"
+          >
+
+        </label>
+
+
+        <label>
+
+          Teléfono
+
+          <input
+            id="registerPhone"
+            type="tel"
+            required
+            autocomplete="tel"
+            placeholder="5512345678"
+          >
+
+        </label>
+
+
+        <label>
+
+          Unidad
+
+          <input
+            id="registerUnit"
+            type="text"
+            required
+            placeholder="Ej. 12"
+          >
+
+        </label>
+
+
+        <label>
+
+          Contraseña
+
+          <div class="password-box">
+
+            <input
+              id="registerPassword"
+              type="password"
+              required
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Mínimo 6 caracteres"
+            >
+
+            <button
+              id="toggleRegisterPassword"
+              class="password-eye"
+              type="button"
+              aria-label="Mostrar contraseña"
+              title="Mostrar contraseña"
+            >
+              👁
+            </button>
+
+          </div>
+
+        </label>
+
+
+        <label>
+
+          Confirmar contraseña
+
+          <div class="password-box">
+
+            <input
+              id="registerPasswordConfirm"
+              type="password"
+              required
+              minlength="6"
+              autocomplete="new-password"
+              placeholder="Repite la contraseña"
+            >
+
+            <button
+              id="toggleRegisterPasswordConfirm"
+              class="password-eye"
+              type="button"
+              aria-label="Mostrar contraseña"
+              title="Mostrar contraseña"
+            >
+              👁
+            </button>
+
+          </div>
+
+        </label>
+
+
+        <button
+          id="registerBtn"
+          class="btn btn-primary"
+          type="submit"
+        >
+          Crear cuenta
         </button>
 
       </form>
