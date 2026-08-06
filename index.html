@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#071426"
+  >
+
+  <title>
+    Grúas Metropolitanas | Control de personal
+  </title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="styles.css"
+  >
+
+</head>
+
+<body>
+
+  <!-- MENSAJES DEL SISTEMA -->
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+
+  <!-- LOGIN -->
+
+  <section
+    id="loginView"
+    class="login-view"
+  >
+
+    <div class="login-card">
+
+      <div class="brand brand-login">
+
+        <div class="brand-icon">
+          🚛
+        </div>
+
+        <div>
+
+          <strong>
+            GRÚAS
+          </strong>
+
+          <span>
+            METROPOLITANAS
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <h1>
+        Control de personal
+      </h1>
+
+      <p>
+        Registra entradas, salidas, ubicación y horas trabajadas.
+      </p>
+
+
+      <form
+        id="loginForm"
+        class="form-stack"
+      >
+
+        <label>
+
+          Correo
+
+          <input
+            id="loginEmail"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="operador@gruas.com"
+          >
+
+        </label>
+
+
+        <label>
+
+          Contraseña
+
+          <input
+            id="loginPassword"
+            type="password"
+            autocomplete="current-password"
+            required
+            placeholder="••••••••"
+          >
+
+        </label>
+
+
+        <button
+          id="loginBtn"
+          class="btn btn-primary"
+          type="submit"
+        >
+          Ingresar
+        </button>
+
+      </form>
+
+
+      <p class="login-help">
+
+        Los usuarios se crean desde Firebase Authentication
+        y su perfil se guarda en la colección
+
+        <b>
+          usuarios
+        </b>.
+
+      </p>
+
+    </div>
+
+  </section>
+
+
+  <!-- APLICACIÓN -->
+
+  <div
+    id="appView"
+    class="app hidden"
+  >
+
+
+    <!-- MENÚ LATERAL -->
+
+    <aside
+      id="sidebar"
+      class="sidebar"
+    >
+
+      <div class="brand">
+
+        <div class="brand-icon">
+          🚛
+        </div>
+
+        <div>
+
+          <strong>
+            GRÚAS
+          </strong>
+
+          <span>
+            METROPOLITANAS
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <nav class="nav">
+
+        <button
+          class="nav-item active"
+          data-section="dashboard"
+        >
+          ⌂
+          <span>
+            Dashboard
+          </span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-section="registros"
+        >
+          ◷
+          <span>
+            Registros
+          </span>
+        </button>
+
+
+        <button
+          class="nav-item admin-only"
+          data-section="operadores"
+        >
+          ♙
+          <span>
+            Operadores
+          </span>
+        </button>
+
+
+        <button
+          class="nav-item admin-only"
+          data-section="unidades"
+        >
+          🚚
+          <span>
+            Unidades
+          </span>
+        </button>
+
+
+        <button
+          class="nav-item admin-only"
+          data-section="reportes"
+        >
+          ▣
+          <span>
+            Reportes
+          </span>
+        </button>
+
+
+        <button
+          class="nav-item"
+          data-section="perfil"
+        >
+          ⚙
+          <span>
+            Perfil
+          </span>
+        </button>
+
+      </nav>
+
+
+      <button
+        id="logoutBtn"
+        class="logout-btn"
+      >
+        ↪ Salir
+      </button>
+
+    </aside>
+
+
+    <!-- CONTENIDO PRINCIPAL -->
+
+    <main class="main">
+
+
+      <!-- BARRA SUPERIOR -->
+
+      <header class="topbar">
+
+        <button
+          id="menuBtn"
+          class="menu-btn"
+          aria-label="Abrir menú"
+        >
+          ☰
+        </button>
+
+
+        <div>
+
+          <h2 id="pageTitle">
+            Dashboard
+          </h2>
+
+          <p id="pageSubtitle">
+            Control de entrada y salida de personal
+          </p>
+
+        </div>
+
+
+        <div class="top-actions">
+
+          <button
+            id="whatsappSettingsBtn"
+            class="whatsapp-chip admin-only"
+          >
+            ◉ WhatsApp
+          </button>
+
+
+          <div class="user-chip">
+
+            <div
+              id="topAvatar"
+              class="avatar"
+            >
+              U
+            </div>
+
+
+            <div>
+
+              <strong id="topUserName">
+                Usuario
+              </strong>
+
+              <span id="topUserRole">
+                Operador
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </header>
+
+
+      <div class="content">
+
+
+        <!-- DASHBOARD -->
+
+        <section
+          id="section-dashboard"
+          class="section active"
+        >
+
+
+          <!-- DASHBOARD DEL OPERADOR -->
+
+          <div
+            id="operatorDashboard"
+            class="operator-layout"
+          >
+
+
+            <article class="operator-card">
+
+
+              <div class="profile-head">
+
+                <div
+                  id="operatorAvatar"
+                  class="profile-photo"
+                >
+                  OP
+                </div>
+
+
+                <div>
+
+                  <h3 id="operatorName">
+                    Operador
+                  </h3>
+
+                  <p>
+                    Operador
+                  </p>
+
+                  <span id="operatorUnit">
+                    Unidad: --
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div
+                id="currentStatusBox"
+                class="status-box status-off"
+              >
+
+                <span class="status-dot"></span>
+
+
+                <div>
+
+                  <small>
+                    Estado actual
+                  </small>
+
+                  <strong id="currentStatusText">
+                    FUERA DE TURNO
+                  </strong>
+
+                  <p id="currentStatusDetail">
+                    Sin entrada registrada
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div class="last-record">
+
+                <small>
+                  Último registro
+                </small>
+
+
+                <div class="record-line">
+
+                  <div
+                    id="lastRecordIcon"
+                    class="record-icon"
+                  >
+                    ↪
+                  </div>
+
+
+                  <div>
+
+                    <strong id="lastRecordType">
+                      Sin registros
+                    </strong>
+
+                    <span id="lastRecordLocation">
+                      Ubicación no disponible
+                    </span>
+
+                  </div>
+
+
+                  <div class="record-time">
+
+                    <strong id="lastRecordTime">
+                      --:--
+                    </strong>
+
+                    <span id="lastRecordDate">
+                      --/--/----
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <button
+                id="attendanceBtn"
+                class="btn btn-entry"
+                type="button"
+              >
+                ↪ MARCAR ENTRADA
+              </button>
+
+
+              <button
+                id="myRecordsBtn"
+                class="btn btn-outline"
+                type="button"
+              >
+                ☷ Ver mis registros
+              </button>
+
+            </article>
+
+
+            <article class="operator-info-card">
+
+              <h3>
+                ¿Cómo funciona?
+              </h3>
+
+
+              <div class="steps">
+
+                <div class="step">
+
+                  <b>
+                    1
+                  </b>
+
+                  <span>
+                    Presiona entrada o salida
+                  </span>
+
+                </div>
+
+
+                <div class="step">
+
+                  <b>
+                    2
+                  </b>
+
+                  <span>
+                    Autoriza tu ubicación
+                  </span>
+
+                </div>
+
+
+                <div class="step">
+
+                  <b>
+                    3
+                  </b>
+
+                  <span>
+                    Se guarda fecha, hora y coordenadas
+                  </span>
+
+                </div>
+
+
+                <div class="step">
+
+                  <b>
+                    4
+                  </b>
+
+                  <span>
+                    Se genera el aviso de WhatsApp
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div class="notice">
+
+                <strong>
+                  Importante
+                </strong>
+
+                <p>
+                  Activa la ubicación precisa del teléfono.
+                  La hora oficial se toma del servidor de Firebase.
+                </p>
+
+              </div>
+
+            </article>
+
+          </div>
+
+
+          <!-- DASHBOARD DEL ADMINISTRADOR -->
+
+          <div
+            id="adminDashboard"
+            class="hidden"
+          >
+
+
+            <div class="stats-grid">
+
+
+              <article class="stat-card">
+
+                <div class="stat-icon blue">
+                  ♙
+                </div>
+
+                <div>
+
+                  <span>
+                    Operadores
+                  </span>
+
+                  <strong id="statOperators">
+                    0
+                  </strong>
+
+                  <small>
+                    Registrados
+                  </small>
+
+                </div>
+
+              </article>
+
+
+              <article class="stat-card">
+
+                <div class="stat-icon green">
+                  ↪
+                </div>
+
+                <div>
+
+                  <span>
+                    Entradas hoy
+                  </span>
+
+                  <strong id="statEntries">
+                    0
+                  </strong>
+
+                  <small>
+                    Registradas
+                  </small>
+
+                </div>
+
+              </article>
+
+
+              <article class="stat-card">
+
+                <div class="stat-icon red">
+                  ↩
+                </div>
+
+                <div>
+
+                  <span>
+                    Salidas hoy
+                  </span>
+
+                  <strong id="statExits">
+                    0
+                  </strong>
+
+                  <small>
+                    Registradas
+                  </small>
+
+                </div>
+
+              </article>
+
+
+              <article class="stat-card">
+
+                <div class="stat-icon yellow">
+                  ◷
+                </div>
+
+                <div>
+
+                  <span>
+                    En turno
+                  </span>
+
+                  <strong id="statActive">
+                    0
+                  </strong>
+
+                  <small>
+                    Actualmente
+                  </small>
+
+                </div>
+
+              </article>
+
+            </div>
+
+
+            <article class="panel">
+
+              <div class="panel-head">
+
+                <div>
+
+                  <h3>
+                    Registros de hoy
+                  </h3>
+
+                  <p>
+                    Información actualizada en tiempo real
+                  </p>
+
+                </div>
+
+
+                <button
+                  id="refreshBtn"
+                  class="btn btn-small"
+                >
+                  Actualizar
+                </button>
+
+              </div>
+
+
+              <div class="table-wrap">
+
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Operador
+                      </th>
+
+                      <th>
+                        Unidad
+                      </th>
+
+                      <th>
+                        Entrada
+                      </th>
+
+                      <th>
+                        Ubicación entrada
+                      </th>
+
+                      <th>
+                        Salida
+                      </th>
+
+                      <th>
+                        Ubicación salida
+                      </th>
+
+                      <th>
+                        Horas trabajadas
+                      </th>
+
+                      <th>
+                        Estado
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+                  <tbody id="todayTableBody"></tbody>
+
+                </table>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+
+        <!-- REGISTROS -->
+
+        <section
+          id="section-registros"
+          class="section"
+        >
+
+          <article class="panel">
+
+            <div class="panel-head responsive">
+
+              <div>
+
+                <h3>
+                  Registros
+                </h3>
+
+                <p id="recordsDescription">
+                  Historial de entradas y salidas
+                </p>
+
+              </div>
+
+
+              <div class="filters">
+
+                <input
+                  id="filterDateFrom"
+                  type="date"
+                >
+
+                <input
+                  id="filterDateTo"
+                  type="date"
+                >
+
+
+                <select id="filterStatus">
+
+                  <option value="">
+                    Todos los estados
+                  </option>
+
+                  <option value="active">
+                    En turno
+                  </option>
+
+                  <option value="completed">
+                    Completado
+                  </option>
+
+                </select>
+
+
+                <button
+                  id="applyFiltersBtn"
+                  class="btn btn-small"
+                >
+                  Filtrar
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <div class="table-wrap">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    <th>
+                      Operador
+                    </th>
+
+                    <th>
+                      Unidad
+                    </th>
+
+                    <th>
+                      Entrada
+                    </th>
+
+                    <th>
+                      Ubicación entrada
+                    </th>
+
+                    <th>
+                      Salida
+                    </th>
+
+                    <th>
+                      Ubicación salida
+                    </th>
+
+                    <th>
+                      Tiempo
+                    </th>
+
+                    <th>
+                      Estado
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody id="recordsTableBody"></tbody>
+
+              </table>
+
+            </div>
+
+          </article>
+
+        </section>
+
+
+        <!-- OPERADORES -->
+
+        <section
+          id="section-operadores"
+          class="section admin-only"
+        >
+
+          <article class="panel">
+
+            <div class="panel-head">
+
+              <div>
+
+                <h3>
+                  Operadores
+                </h3>
+
+                <p>
+                  Usuarios registrados en el sistema
+                </p>
+
+              </div>
+
+
+              <button
+                id="newOperatorBtn"
+                class="btn btn-primary btn-small"
+              >
+                + Nuevo operador
+              </button>
+
+            </div>
+
+
+            <div
+              id="operatorsGrid"
+              class="cards-grid"
+            ></div>
+
+          </article>
+
+        </section>
+
+
+        <!-- UNIDADES -->
+
+        <section
+          id="section-unidades"
+          class="section admin-only"
+        >
+
+          <article class="panel">
+
+            <div class="panel-head">
+
+              <div>
+
+                <h3>
+                  Unidades
+                </h3>
+
+                <p>
+                  Catálogo básico de grúas y vehículos
+                </p>
+
+              </div>
+
+
+              <button
+                id="newUnitBtn"
+                class="btn btn-primary btn-small"
+              >
+                + Nueva unidad
+              </button>
+
+            </div>
+
+
+            <div
+              id="unitsGrid"
+              class="cards-grid"
+            ></div>
+
+          </article>
+
+        </section>
+
+
+        <!-- REPORTES -->
+
+        <section
+          id="section-reportes"
+          class="section admin-only"
+        >
+
+          <div class="report-grid">
+
+
+            <article class="panel">
+
+              <h3>
+                Exportar registros
+              </h3>
+
+              <p>
+                Descarga un archivo CSV compatible con Excel.
+              </p>
+
+
+              <div class="form-stack compact">
+
+                <label>
+
+                  Desde
+
+                  <input
+                    id="reportFrom"
+                    type="date"
+                  >
+
+                </label>
+
+
+                <label>
+
+                  Hasta
+
+                  <input
+                    id="reportTo"
+                    type="date"
+                  >
+
+                </label>
+
+
+                <button
+                  id="downloadCsvBtn"
+                  class="btn btn-primary"
+                >
+                  Descargar CSV
+                </button>
+
+              </div>
+
+            </article>
+
+
+            <article class="panel">
+
+              <h3>
+                Resumen
+              </h3>
+
+
+              <div class="summary-row">
+
+                <span>
+                  Registros encontrados
+                </span>
+
+                <strong id="reportTotal">
+                  0
+                </strong>
+
+              </div>
+
+
+              <div class="summary-row">
+
+                <span>
+                  Horas acumuladas
+                </span>
+
+                <strong id="reportHours">
+                  0 h
+                </strong>
+
+              </div>
+
+
+              <div class="summary-row">
+
+                <span>
+                  Turnos abiertos
+                </span>
+
+                <strong id="reportOpen">
+                  0
+                </strong>
+
+              </div>
+
+            </article>
+
+          </div>
+
+        </section>
+
+
+        <!-- PERFIL -->
+
+        <section
+          id="section-perfil"
+          class="section"
+        >
+
+          <article class="panel profile-panel">
+
+            <h3>
+              Mi perfil
+            </h3>
+
+
+            <form
+              id="profileForm"
+              class="form-grid"
+            >
+
+              <label>
+
+                Nombre completo
+
+                <input
+                  id="profileName"
+                  required
+                >
+
+              </label>
+
+
+              <label>
+
+                Unidad
+
+                <input
+                  id="profileUnit"
+                  placeholder="Ej. 12"
+                >
+
+              </label>
+
+
+              <label>
+
+                Teléfono
+
+                <input
+                  id="profilePhone"
+                  type="tel"
+                >
+
+              </label>
+
+
+              <label>
+
+                Foto URL
+
+                <input
+                  id="profilePhoto"
+                  type="url"
+                >
+
+              </label>
+
+
+              <button
+                class="btn btn-primary"
+                type="submit"
+              >
+                Guardar cambios
+              </button>
+
+            </form>
+
+          </article>
+
+        </section>
+
+      </div>
+
+    </main>
+
+  </div>
+
+
+  <!-- MODAL DE CARGA -->
+
+  <div
+    id="loadingModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-card centered">
+
+      <div class="spinner"></div>
+
+      <h3 id="loadingTitle">
+        Obteniendo ubicación
+      </h3>
+
+      <p id="loadingText">
+        No cierres esta ventana.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- MODAL NUEVO OPERADOR -->
+
+  <div
+    id="operatorModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-card">
+
+      <div class="modal-head">
+
+        <h3>
+          Nuevo operador
+        </h3>
+
+        <button class="close-modal">
+          ×
+        </button>
+
+      </div>
+
+
+      <p class="modal-note">
+
+        Primero crea el usuario en Firebase Authentication.
+
+        Después pega aquí su UID.
+
+      </p>
+
+
+      <form
+        id="operatorForm"
+        class="form-stack"
+      >
+
+        <label>
+
+          UID de Firebase
+
+          <input
+            id="newOperatorUid"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Nombre
+
+          <input
+            id="newOperatorName"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Correo
+
+          <input
+            id="newOperatorEmail"
+            type="email"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Unidad
+
+          <input
+            id="newOperatorUnit"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Teléfono
+
+          <input
+            id="newOperatorPhone"
+            type="tel"
+          >
+
+        </label>
+
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          Guardar operador
+        </button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- MODAL NUEVA UNIDAD -->
+
+  <div
+    id="unitModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-card">
+
+      <div class="modal-head">
+
+        <h3>
+          Nueva unidad
+        </h3>
+
+        <button class="close-modal">
+          ×
+        </button>
+
+      </div>
+
+
+      <form
+        id="unitForm"
+        class="form-stack"
+      >
+
+        <label>
+
+          Número de unidad
+
+          <input
+            id="unitNumber"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Tipo de unidad
+
+          <input
+            id="unitType"
+            placeholder="Plataforma, Underlift, Tracto..."
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Placas
+
+          <input id="unitPlates">
+
+        </label>
+
+
+        <label>
+
+          Capacidad
+
+          <input
+            id="unitCapacity"
+            placeholder="Ej. 15 toneladas"
+          >
+
+        </label>
+
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          Guardar unidad
+        </button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- MODAL WHATSAPP -->
+
+  <div
+    id="whatsappModal"
+    class="modal hidden"
+  >
+
+    <div class="modal-card">
+
+      <div class="modal-head">
+
+        <h3>
+          Configuración WhatsApp
+        </h3>
+
+        <button class="close-modal">
+          ×
+        </button>
+
+      </div>
+
+
+      <form
+        id="whatsappForm"
+        class="form-stack"
+      >
+
+        <label>
+
+          Número destino con código de país
+
+          <input
+            id="whatsappNumber"
+            placeholder="5215512345678"
+          >
+
+        </label>
+
+
+        <label class="checkbox-line">
+
+          <input
+            id="whatsappAutoOpen"
+            type="checkbox"
+          >
+
+          Abrir WhatsApp después de cada registro
+
+        </label>
+
+
+        <p class="modal-note">
+
+          El navegador puede abrir WhatsApp con el mensaje listo.
+
+          Para envío automático sin intervención se necesita una API
+          o webhook conectado con Firebase Functions.
+
+        </p>
+
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+        >
+          Guardar configuración
+        </button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <script
+    type="module"
+    src="app.js"
+  ></script>
+
+</body>
+
+</html>
