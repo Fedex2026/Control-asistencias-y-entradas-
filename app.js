@@ -84,7 +84,8 @@ function clearListeners() {
 }
 
 function isAdmin() {
-  return state.profile?.role === "admin";
+  const rol = String(state.profile?.rol || state.profile?.role || "").trim().toLowerCase();
+  return rol === "administrador" || rol === "admin";
 }
 
 function localDateKey(date = new Date()) {
@@ -190,8 +191,8 @@ function buildWhatsAppMessage(type, record, profile) {
   const title = isEntry ? "ENTRADA REGISTRADA" : "SALIDA REGISTRADA";
   const lines = [
     `${icon} *${title}*`,
-    `Operador: ${profile.name || "Sin nombre"}`,
-    `Unidad: ${profile.unit || "Sin unidad"}`,
+    `Operador: ${profile.nombre || profile.name || "Sin nombre"}`,
+    `Unidad: ${profile.unidad || profile.unit || "Sin unidad"}`,
     `Fecha: ${formatDate(at)}`,
     `Hora: ${formatTime(at)}`
   ];
@@ -235,31 +236,54 @@ async function notifyWhatsApp(type, record) {
 }
 
 async function loadProfile(uid) {
-  const snap = await getDoc(doc(db, "usuarios", uid));
+  let snap = await getDoc(doc(db, "usuarios", uid));
+
   if (!snap.exists()) {
-    throw new Error("Tu usuario no tiene perfil en Firestore.");
+    try {
+      const legacySnap = await getDoc(doc(db, uid, uid));
+      if (legacySnap.exists()) snap = legacySnap;
+    } catch (error) {
+      console.warn("No se pudo revisar la ruta alternativa del perfil:", error);
+    }
   }
-  state.profile = { id: snap.id, ...snap.data() };
+
+  if (!snap.exists()) {
+    throw new Error("Tu usuario no tiene perfil en Firestore. Verifica usuarios/{UID}.");
+  }
+
+  const data = snap.data();
+  state.profile = {
+    id: snap.id,
+    ...data,
+    nombre: data.nombre || data.name || "",
+    correo: data.correo || data.email || state.user?.email || "",
+    rol: String(data.rol || data.role || "operador").trim().toLowerCase(),
+    unidad: data.unidad || data.unit || "",
+    telefono: data.telefono || data.phone || "",
+    activo: data.activo ?? data.active ?? true,
+    fotoUrl: data.fotoUrl || data.photoUrl || ""
+  };
 }
 
 function applyProfileToUI() {
   const p = state.profile;
-  $("topUserName").textContent = p.name || state.user.email;
-  $("topUserRole").textContent = p.role === "admin" ? "Administrador" : "Operador";
-  $("topAvatar").textContent = (p.name || "U").slice(0, 1).toUpperCase();
+  $("topUserName").textContent = p.nombre || state.user.email;
+  $("topUserRole").textContent = isAdmin() ? "Administrador" : "Operador";
+  $("topAvatar").textContent = (p.nombre || "U").slice(0, 1).toUpperCase();
 
-  $("operatorName").textContent = p.name || "Operador";
-  $("operatorUnit").textContent = `Unidad: ${p.unit || "--"}`;
-  $("operatorAvatar").textContent = (p.name || "OP").slice(0, 2).toUpperCase();
-  if (p.photoUrl) {
-    $("operatorAvatar").style.backgroundImage = `url("${p.photoUrl}")`;
+  $("operatorName").textContent = p.nombre || "Operador";
+  $("operatorUnit").textContent = `Unidad: ${p.unidad || "--"}`;
+  $("operatorAvatar").textContent = (p.nombre || "OP").slice(0, 2).toUpperCase();
+
+  if (p.fotoUrl) {
+    $("operatorAvatar").style.backgroundImage = `url("${p.fotoUrl}")`;
     $("operatorAvatar").textContent = "";
   }
 
-  $("profileName").value = p.name || "";
-  $("profileUnit").value = p.unit || "";
-  $("profilePhone").value = p.phone || "";
-  $("profilePhoto").value = p.photoUrl || "";
+  $("profileName").value = p.nombre || "";
+  $("profileUnit").value = p.unidad || "";
+  $("profilePhone").value = p.telefono || "";
+  $("profilePhoto").value = p.fotoUrl || "";
 
   document.querySelectorAll(".admin-only").forEach(el => {
     el.classList.toggle("hidden", !isAdmin());
@@ -389,7 +413,10 @@ function renderAdminStats() {
   if (!isAdmin()) return;
   const today = localDateKey();
   const todayRows = state.records.filter(r => r.dateKey === today);
-  $("statOperators").textContent = state.users.filter(u => u.role === "operator").length;
+  $("statOperators").textContent = state.users.filter(u => {
+    const rol = String(u.rol || u.role || "").trim().toLowerCase();
+    return rol === "operador" || rol === "operator";
+  }).length;
   $("statEntries").textContent = todayRows.length;
   $("statExits").textContent = todayRows.filter(r => r.exitAt).length;
   $("statActive").textContent = state.records.filter(r => r.status === "active").length;
@@ -397,13 +424,16 @@ function renderAdminStats() {
 
 function renderOperators() {
   if (!isAdmin()) return;
-  const operators = state.users.filter(u => u.role === "operator");
+  const operators = state.users.filter(u => {
+    const rol = String(u.rol || u.role || "").trim().toLowerCase();
+    return rol === "operador" || rol === "operator";
+  });
   $("operatorsGrid").innerHTML = operators.length ? operators.map(u => `
     <article class="person-card">
-      <h4>${escapeHtml(u.name || "Sin nombre")}</h4>
-      <p>${escapeHtml(u.email || "")}</p>
-      <p>Unidad: <b>${escapeHtml(u.unit || "Sin asignar")}</b></p>
-      <p>Teléfono: ${escapeHtml(u.phone || "—")}</p>
+      <h4>${escapeHtml(u.nombre || u.name || "Sin nombre")}</h4>
+      <p>${escapeHtml(u.correo || u.email || "")}</p>
+      <p>Unidad: <b>${escapeHtml(u.unidad || u.unit || "Sin asignar")}</b></p>
+      <p>Teléfono: ${escapeHtml(u.telefono || u.phone || "—")}</p>
       <span class="status-pill completed badge">Operador</span>
     </article>
   `).join("") : `<p>No hay operadores.</p>`;
@@ -443,9 +473,9 @@ async function registerEntry() {
     const now = new Date();
     const payload = {
       operatorUid: state.user.uid,
-      operatorName: state.profile.name || "",
-      operatorEmail: state.user.email || state.profile.email || "",
-      unit: state.profile.unit || "",
+      operatorName: state.profile.nombre || "",
+      operatorEmail: state.user.email || state.profile.correo || "",
+      unit: state.profile.unidad || "",
       dateKey: localDateKey(now),
       status: "active",
       entryAt: serverTimestamp(),
@@ -534,10 +564,10 @@ async function saveProfile(event) {
   event.preventDefault();
   try {
     const updates = {
-      name: $("profileName").value.trim(),
-      unit: $("profileUnit").value.trim(),
-      phone: $("profilePhone").value.trim(),
-      photoUrl: $("profilePhoto").value.trim(),
+      nombre: $("profileName").value.trim(),
+      unidad: $("profileUnit").value.trim(),
+      telefono: $("profilePhone").value.trim(),
+      fotoUrl: $("profilePhoto").value.trim(),
       updatedAt: serverTimestamp()
     };
     await updateDoc(doc(db, "usuarios", state.user.uid), updates);
@@ -554,12 +584,12 @@ async function saveNewOperator(event) {
   const uid = $("newOperatorUid").value.trim();
   try {
     await setDoc(doc(db, "usuarios", uid), {
-      name: $("newOperatorName").value.trim(),
-      email: $("newOperatorEmail").value.trim(),
-      unit: $("newOperatorUnit").value.trim(),
-      phone: $("newOperatorPhone").value.trim(),
-      role: "operator",
-      active: true,
+      nombre: $("newOperatorName").value.trim(),
+      correo: $("newOperatorEmail").value.trim(),
+      unidad: $("newOperatorUnit").value.trim(),
+      telefono: $("newOperatorPhone").value.trim(),
+      rol: "operador",
+      activo: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -722,4 +752,3 @@ onAuthStateChanged(auth, async user => {
     hideLoading();
   }
 });
-
