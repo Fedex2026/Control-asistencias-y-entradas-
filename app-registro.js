@@ -61,6 +61,10 @@ const state = {
   records: [],
   users: [],
   units: [],
+  whatsappSettings: {
+    number: "",
+    autoOpen: false
+  },
   unsubscribers: []
 };
 
@@ -227,11 +231,37 @@ function buildWhatsAppMessage(type, record, profile) {
   return lines.join("\n");
 }
 
-async function notifyWhatsApp(type, record) {
+async function loadWhatsAppSettings() {
+  try {
+    const settingsSnap = await getDoc(doc(db, "configuracion", "whatsapp"));
+    const settings = settingsSnap.exists() ? settingsSnap.data() : {};
+
+    state.whatsappSettings = {
+      number: String(settings.number || "").replace(/\D/g, ""),
+      autoOpen: Boolean(settings.autoOpen)
+    };
+  } catch (error) {
+    console.warn("No se pudo cargar la configuración de WhatsApp:", error);
+    state.whatsappSettings = {
+      number: "",
+      autoOpen: false
+    };
+  }
+}
+
+function prepareWhatsAppWindow() {
+  if (!state.whatsappSettings.autoOpen) return null;
+
+  try {
+    return window.open("about:blank", "_blank");
+  } catch {
+    return null;
+  }
+}
+
+async function notifyWhatsApp(type, record, popupWindow = null) {
   const message = buildWhatsAppMessage(type, record, state.profile);
-  const settingsSnap = await getDoc(doc(db, "configuracion", "whatsapp"));
-  const settings = settingsSnap.exists() ? settingsSnap.data() : {};
-  const number = String(settings.number || "").replace(/\D/g, "");
+  const number = state.whatsappSettings.number;
 
   if (notificationWebhookUrl) {
     try {
@@ -245,18 +275,34 @@ async function notifyWhatsApp(type, record) {
           operatorUid: state.user.uid
         })
       });
+
       if (!response.ok) throw new Error("Webhook rechazó el aviso.");
+
+      if (popupWindow && !popupWindow.closed) {
+        popupWindow.close();
+      }
+
       return;
     } catch (error) {
       console.warn("Webhook WhatsApp:", error);
     }
   }
 
-  if (settings.autoOpen) {
-    const target = number
-      ? `https://wa.me/${number}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(target, "_blank", "noopener");
+  if (!state.whatsappSettings.autoOpen) {
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.close();
+    }
+    return;
+  }
+
+  const target = number
+    ? `https://wa.me/${number}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+  if (popupWindow && !popupWindow.closed) {
+    popupWindow.location.href = target;
+  } else {
+    window.location.href = target;
   }
 }
 
@@ -325,15 +371,31 @@ function setupRealtimeData() {
   const recordsRef = collection(db, "registros");
   const recordsQuery = isAdmin()
     ? query(recordsRef, orderBy("entryAt", "desc"), limit(500))
-    : query(recordsRef, where("operatorUid", "==", state.user.uid), orderBy("entryAt", "desc"), limit(200));
+    : query(
+        recordsRef,
+        where("operatorUid", "==", state.user.uid),
+        limit(200)
+      );
 
   state.unsubscribers.push(onSnapshot(recordsQuery, snap => {
-    state.records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    state.activeShift = state.records.find(r => r.status === "active") || null;
+    state.records = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const aDate = toDate(a.entryAt) || toDate(a.entryAtClient) || new Date(0);
+        const bDate = toDate(b.entryAt) || toDate(b.entryAtClient) || new Date(0);
+        return bDate.getTime() - aDate.getTime();
+      });
+
+    state.activeShift =
+      state.records.find(r => r.status === "active") || null;
+
     renderAll();
   }, error => {
     console.error(error);
-    showToast("No se pudieron leer los registros. Revisa índices y reglas.", "error");
+    showToast(
+      "No se pudieron leer los registros. Revisa las reglas de Firestore.",
+      "error"
+    );
   }));
 
   if (isAdmin()) {
@@ -490,8 +552,14 @@ function renderReportsSummary() {
   $("reportOpen").textContent = rows.filter(r => r.status === "active").length;
 }
 
-async function registerEntry() {
-  showLoading("Obteniendo ubicación", "Autoriza el acceso a la ubicación precisa.");
+async function registerEntry(popupWindow = null) {
+  showLoading(
+    "Obteniendo ubicación",
+    "Autoriza el acceso a la ubicación precisa."
+  );
+
+  els.attendanceBtn.disabled = true;
+
   try {
     let location = await getPosition();
     location = await reverseGeocode(location);
@@ -515,26 +583,62 @@ async function registerEntry() {
     };
 
     const ref = await addDoc(collection(db, "registros"), payload);
-    const record = { id: ref.id, ...payload, entryAt: now };
-    await notifyWhatsApp("entry", record);
+
+    const record = {
+      id: ref.id,
+      ...payload,
+      entryAt: now
+    };
+
+    // Actualización inmediata de la pantalla, sin esperar al listener.
+    state.records = [
+      record,
+      ...state.records.filter(item => item.id !== record.id)
+    ];
+    state.activeShift = record;
+    renderAll();
+
+    await notifyWhatsApp("entry", record, popupWindow);
+
     showToast("Entrada registrada correctamente.", "success");
   } catch (error) {
     console.error(error);
-    showToast(error.message || "No se pudo registrar la entrada.", "error");
+
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.close();
+    }
+
+    showToast(
+      error.message || "No se pudo registrar la entrada.",
+      "error"
+    );
   } finally {
+    els.attendanceBtn.disabled = false;
     hideLoading();
   }
 }
 
-async function registerExit() {
-  if (!state.activeShift) return;
-  showLoading("Registrando salida", "Obteniendo ubicación precisa.");
+async function registerExit(popupWindow = null) {
+  if (!state.activeShift) {
+    if (popupWindow && !popupWindow.closed) popupWindow.close();
+    return;
+  }
+
+  showLoading(
+    "Registrando salida",
+    "Obteniendo ubicación precisa."
+  );
+
+  els.attendanceBtn.disabled = true;
+
   try {
     let location = await getPosition();
     location = await reverseGeocode(location);
-    const now = new Date();
 
-    await updateDoc(doc(db, "registros", state.activeShift.id), {
+    const now = new Date();
+    const activeId = state.activeShift.id;
+
+    await updateDoc(doc(db, "registros", activeId), {
       status: "completed",
       exitAt: serverTimestamp(),
       exitAtClient: now.toISOString(),
@@ -549,12 +653,30 @@ async function registerExit() {
       exitLocation: location,
       status: "completed"
     };
-    await notifyWhatsApp("exit", record);
+
+    // Actualización inmediata de la pantalla.
+    state.records = state.records.map(item =>
+      item.id === activeId ? record : item
+    );
+    state.activeShift = null;
+    renderAll();
+
+    await notifyWhatsApp("exit", record, popupWindow);
+
     showToast("Salida registrada correctamente.", "success");
   } catch (error) {
     console.error(error);
-    showToast(error.message || "No se pudo registrar la salida.", "error");
+
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.close();
+    }
+
+    showToast(
+      error.message || "No se pudo registrar la salida.",
+      "error"
+    );
   } finally {
+    els.attendanceBtn.disabled = false;
     hideLoading();
   }
 }
@@ -648,11 +770,19 @@ async function saveNewUnit(event) {
 async function saveWhatsAppSettings(event) {
   event.preventDefault();
   try {
+    const number = $("whatsappNumber").value.trim();
+    const autoOpen = $("whatsappAutoOpen").checked;
+
     await setDoc(doc(db, "configuracion", "whatsapp"), {
-      number: $("whatsappNumber").value.trim(),
-      autoOpen: $("whatsappAutoOpen").checked,
+      number,
+      autoOpen,
       updatedAt: serverTimestamp()
     }, { merge: true });
+
+    state.whatsappSettings = {
+      number: number.replace(/\D/g, ""),
+      autoOpen
+    };
     $("whatsappModal").classList.add("hidden");
     showToast("Configuración guardada.", "success");
   } catch (error) {
@@ -661,10 +791,14 @@ async function saveWhatsAppSettings(event) {
 }
 
 async function openWhatsAppSettings() {
-  const snap = await getDoc(doc(db, "configuracion", "whatsapp"));
-  const data = snap.exists() ? snap.data() : {};
-  $("whatsappNumber").value = data.number || "";
-  $("whatsappAutoOpen").checked = Boolean(data.autoOpen);
+  await loadWhatsAppSettings();
+
+  $("whatsappNumber").value =
+    state.whatsappSettings.number || "";
+
+  $("whatsappAutoOpen").checked =
+    state.whatsappSettings.autoOpen;
+
   $("whatsappModal").classList.remove("hidden");
 }
 
@@ -866,7 +1000,15 @@ $("forgotPasswordBtn")?.addEventListener("click", recoverPassword);
 
 els.logoutBtn.addEventListener("click", () => signOut(auth));
 els.menuBtn.addEventListener("click", () => els.sidebar.classList.toggle("open"));
-els.attendanceBtn.addEventListener("click", () => state.activeShift ? registerExit() : registerEntry());
+els.attendanceBtn.addEventListener("click", () => {
+  const popupWindow = prepareWhatsAppWindow();
+
+  if (state.activeShift) {
+    registerExit(popupWindow);
+  } else {
+    registerEntry(popupWindow);
+  }
+});
 els.myRecordsBtn.addEventListener("click", () => navigate("registros"));
 $("refreshBtn").addEventListener("click", renderAll);
 $("applyFiltersBtn").addEventListener("click", renderRecordsTable);
@@ -925,6 +1067,7 @@ onAuthStateChanged(auth, async user => {
       );
     }
 
+    await loadWhatsAppSettings();
     applyProfileToUI();
     setupRealtimeData();
     els.loginView.classList.add("hidden");
