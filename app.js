@@ -3,6 +3,8 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
@@ -29,6 +31,29 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const $ = id => document.getElementById(id);
+
+function togglePassword(inputId, buttonId) {
+  const input = $(inputId);
+  const button = $(buttonId);
+
+  if (!input || !button) return;
+
+  button.addEventListener("click", () => {
+    const hidden = input.type === "password";
+
+    input.type = hidden ? "text" : "password";
+    button.textContent = hidden ? "🙈" : "👁";
+    button.setAttribute(
+      "aria-label",
+      hidden ? "Ocultar contraseña" : "Mostrar contraseña"
+    );
+    button.setAttribute(
+      "title",
+      hidden ? "Ocultar contraseña" : "Mostrar contraseña"
+    );
+  });
+}
+
 const state = {
   user: null,
   profile: null,
@@ -261,6 +286,7 @@ async function loadProfile(uid) {
     unidad: data.unidad || data.unit || "",
     telefono: data.telefono || data.phone || "",
     activo: data.activo ?? data.active ?? true,
+    autorizado: data.autorizado ?? data.authorized ?? true,
     fotoUrl: data.fotoUrl || data.photoUrl || ""
   };
 }
@@ -679,6 +705,121 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
+
+async function registerOperator(event) {
+  event.preventDefault();
+
+  const nombre = $("registerName")?.value.trim() || "";
+  const correo = $("registerEmail")?.value.trim() || "";
+  const telefono = $("registerPhone")?.value.trim() || "";
+  const unidad = $("registerUnit")?.value.trim() || "";
+  const password = $("registerPassword")?.value || "";
+  const passwordConfirm = $("registerPasswordConfirm")?.value || "";
+  const registerBtn = $("registerBtn");
+
+  if (!nombre || !correo || !telefono || !unidad || !password || !passwordConfirm) {
+    showToast("Completa todos los campos.", "error");
+    return;
+  }
+
+  if (password.length < 6) {
+    showToast("La contraseña debe tener al menos 6 caracteres.", "error");
+    return;
+  }
+
+  if (password !== passwordConfirm) {
+    showToast("Las contraseñas no coinciden.", "error");
+    return;
+  }
+
+  registerBtn.disabled = true;
+  registerBtn.textContent = "Creando cuenta...";
+
+  let credential = null;
+
+  try {
+    credential = await createUserWithEmailAndPassword(auth, correo, password);
+
+    await setDoc(doc(db, "usuarios", credential.user.uid), {
+      nombre,
+      correo,
+      telefono,
+      unidad,
+      rol: "operador",
+      activo: false,
+      autorizado: false,
+      creadoEn: serverTimestamp(),
+      actualizadoEn: serverTimestamp()
+    });
+
+    await signOut(auth);
+
+    $("registerForm").reset();
+    $("registerModal").classList.add("hidden");
+    $("loginEmail").value = correo;
+
+    showToast(
+      "Cuenta creada. Espera la autorización del administrador.",
+      "success"
+    );
+  } catch (error) {
+    console.error(error);
+
+    // Si Authentication creó la cuenta pero Firestore falló,
+    // cerramos sesión para evitar que quede abierta.
+    try {
+      if (credential?.user) await signOut(auth);
+    } catch {}
+
+    const messages = {
+      "auth/email-already-in-use": "Ese correo ya está registrado.",
+      "auth/invalid-email": "El correo electrónico no es válido.",
+      "auth/weak-password": "La contraseña es demasiado débil.",
+      "auth/network-request-failed": "No fue posible conectarse con Firebase."
+    };
+
+    showToast(
+      messages[error.code] || error.message || "No se pudo crear la cuenta.",
+      "error"
+    );
+  } finally {
+    registerBtn.disabled = false;
+    registerBtn.textContent = "Crear cuenta";
+  }
+}
+
+async function recoverPassword() {
+  const correo = els.loginEmail.value.trim();
+
+  if (!correo) {
+    showToast("Escribe primero tu correo.", "error");
+    els.loginEmail.focus();
+    return;
+  }
+
+  try {
+    await sendPasswordResetEmail(auth, correo);
+    showToast(
+      "Se envió un enlace para cambiar tu contraseña.",
+      "success"
+    );
+  } catch (error) {
+    console.error(error);
+
+    const messages = {
+      "auth/invalid-email": "El correo electrónico no es válido.",
+      "auth/user-not-found": "No existe una cuenta con ese correo.",
+      "auth/network-request-failed": "No fue posible conectarse con Firebase."
+    };
+
+    showToast(
+      messages[error.code] ||
+      "No fue posible enviar el correo de recuperación.",
+      "error"
+    );
+  }
+}
+
 els.loginForm.addEventListener("submit", async event => {
   event.preventDefault();
   els.loginBtn.disabled = true;
@@ -686,12 +827,42 @@ els.loginForm.addEventListener("submit", async event => {
   try {
     await signInWithEmailAndPassword(auth, els.loginEmail.value.trim(), els.loginPassword.value);
   } catch (error) {
-    showToast("Correo o contraseña incorrectos.", "error");
+    console.error(error);
+
+    const messages = {
+      "auth/invalid-credential": "Correo o contraseña incorrectos.",
+      "auth/invalid-email": "El correo electrónico no es válido.",
+      "auth/user-disabled": "Esta cuenta está desactivada.",
+      "auth/too-many-requests": "Demasiados intentos. Intenta más tarde.",
+      "auth/network-request-failed": "No fue posible conectarse con Firebase."
+    };
+
+    showToast(
+      messages[error.code] || "No se pudo iniciar sesión.",
+      "error"
+    );
   } finally {
     els.loginBtn.disabled = false;
     els.loginBtn.textContent = "Ingresar";
   }
 });
+
+
+togglePassword("loginPassword", "toggleLoginPassword");
+togglePassword("registerPassword", "toggleRegisterPassword");
+togglePassword("registerPasswordConfirm", "toggleRegisterPasswordConfirm");
+
+$("showRegisterBtn")?.addEventListener("click", () => {
+  $("registerModal")?.classList.remove("hidden");
+});
+
+$("closeRegisterModal")?.addEventListener("click", () => {
+  $("registerModal")?.classList.add("hidden");
+});
+
+$("registerForm")?.addEventListener("submit", registerOperator);
+
+$("forgotPasswordBtn")?.addEventListener("click", recoverPassword);
 
 els.logoutBtn.addEventListener("click", () => signOut(auth));
 els.menuBtn.addEventListener("click", () => els.sidebar.classList.toggle("open"));
@@ -739,6 +910,21 @@ onAuthStateChanged(auth, async user => {
   showLoading("Cargando sistema", "Validando perfil y permisos.");
   try {
     await loadProfile(user.uid);
+
+    if (
+      !isAdmin()
+      && state.profile.rol === "operador"
+      && (
+        state.profile.activo !== true
+        || state.profile.autorizado === false
+      )
+    ) {
+      await signOut(auth);
+      throw new Error(
+        "Tu cuenta está pendiente de autorización por el administrador."
+      );
+    }
+
     applyProfileToUI();
     setupRealtimeData();
     els.loginView.classList.add("hidden");
