@@ -1,40 +1,37 @@
-/*
-  CONFIGURACIÓN DE FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
-  1. Entra a Firebase Console.
-  2. Abre tu proyecto.
-  3. Ve a Configuración del proyecto.
-  4. Entra a Tus aplicaciones.
-  5. Selecciona o crea una aplicación web.
-  6. Copia los datos de firebaseConfig.
-  7. Sustituye los datos de ejemplo de abajo.
-*/
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+
 
 export const firebaseConfig = {
+
   apiKey: "AIzaSyAG1UPUKECymTZ3aifFQuyN_mbviYjm2Q4",
+
   authDomain: "control-asistencias-y-entradas.firebaseapp.com",
+
   databaseURL: "https://control-asistencias-y-entradas-default-rtdb.firebaseio.com",
+
   projectId: "control-asistencias-y-entradas",
+
   storageBucket: "control-asistencias-y-entradas.firebasestorage.app",
+
   messagingSenderId: "420567524268",
+
   appId: "1:420567524268:web:5ec9a3e319ec56a6395009"
+
 };
 
-export const notificationWebhookUrl = "";
 
-/*
-  WEBHOOK OPCIONAL PARA WHATSAPP
 
-  Déjalo vacío si solamente quieres que la web abra WhatsApp
-  con el mensaje preparado.
+export const app = initializeApp(firebaseConfig);
 
-  Para mandar el mensaje automáticamente necesitas conectar
-  una Firebase Function o un proveedor autorizado de WhatsApp.
+export const auth = getAuth(app);
 
-  Ejemplo:
+export const db = getFirestore(app);
 
-  export const notificationWebhookUrl =
-    "https://us-central1-tu-proyecto.cloudfunctions.net/notifyAttendance";
-*/
+
 
 export const notificationWebhookUrl = "";
