@@ -1053,3 +1053,109 @@ select:focus {
     padding: 25px 20px;
   }
 }
+
+
+/* REGISTRO Y CONTRASEÑAS */
+
+.password-box {
+  position: relative;
+  width: 100%;
+}
+
+.password-box input {
+  width: 100%;
+  padding-right: 52px;
+}
+
+.password-eye {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--navy);
+  font-size: 19px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: 0.18s;
+}
+
+.password-eye:hover {
+  background: #eef3fa;
+}
+
+.password-eye:focus-visible {
+  outline: 3px solid rgba(23, 105, 224, 0.18);
+}
+
+.btn-register {
+  width: 100%;
+  margin-top: 10px;
+  background: #eef4ff;
+  color: var(--blue);
+  border: 1px solid #cdddf8;
+}
+
+.btn-register:hover {
+  background: #dfeaff;
+}
+
+.forgot-password {
+  width: 100%;
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+#registerModal .modal-card {
+  width: min(520px, 100%);
+}
+
+#registerForm {
+  margin-top: 18px;
+}
+
+#registerBtn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.login-card .form-stack {
+  gap: 14px;
+}
+
+.login-card .btn-primary,
+.login-card .btn-register {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .password-eye {
+    right: 6px;
+  }
+
+  #registerModal {
+    align-items: end;
+    padding: 0;
+  }
+
+  #registerModal .modal-card {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+    padding: 20px;
+  }
+}
